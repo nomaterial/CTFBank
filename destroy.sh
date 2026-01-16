@@ -10,9 +10,12 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
+# Permettre l'exécution en root
 if [ "$EUID" -eq 0 ]; then 
-   echo -e "${RED}Ne pas exécuter en tant que root. Utilisez un utilisateur normal.${NC}"
-   exit 1
+   echo -e "${YELLOW}⚠️  Exécution en tant que root détectée.${NC}"
+   ROOT_MODE=true
+else
+   ROOT_MODE=false
 fi
 
 if [ ! -f "infra/vars.yml" ]; then
