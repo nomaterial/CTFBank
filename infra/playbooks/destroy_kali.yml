@@ -1,0 +1,32 @@
+---
+- name: Supprimer des conteneurs Kali Linux
+  hosts: local
+  gather_facts: false
+  vars_files:
+    - ../vars.yml
+  vars:
+    kali_count: "{{ kali_count | default(1) }}"
+    kali_start_id: "{{ kali_start_id | default(kali_base_ct_id) }}"
+  tasks:
+    - name: Arrêter les conteneurs Kali
+      community.general.proxmox:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ proxmox_user }}"
+        api_token_id: "{{ proxmox_token_id }}"
+        api_token_secret: "{{ proxmox_token_secret }}"
+        node: "{{ proxmox_node }}"
+        vmid: "{{ kali_start_id | int + item }}"
+        state: stopped
+      loop: "{{ range(0, kali_count | int) | list }}"
+      ignore_errors: true
+
+    - name: Supprimer les conteneurs Kali
+      community.general.proxmox:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ proxmox_user }}"
+        api_token_id: "{{ proxmox_token_id }}"
+        api_token_secret: "{{ proxmox_token_secret }}"
+        node: "{{ proxmox_node }}"
+        vmid: "{{ kali_start_id | int + item }}"
+        state: absent
+      loop: "{{ range(0, kali_count | int) | list }}"

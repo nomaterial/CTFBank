@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact - BankCTF</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">🏦 BankCTF</div>
+            <ul>
+                <li><a href="/">Accueil</a></li>
+                <li><a href="/contact">Contact</a></li>
+                <li><a href="/login">Se connecter</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="contact-section">
+            <h1>Contactez-nous</h1>
+            <div class="contact-info">
+                <div class="info-card">
+                    <h3>📍 Adresse</h3>
+                    <p>123 Avenue de la République<br>75011 Paris, France</p>
+                </div>
+                <div class="info-card">
+                    <h3>📞 Téléphone</h3>
+                    <p>Service Client: 09 70 80 90 10<br>Support Technique: 09 70 80 90 11</p>
+                </div>
+                <div class="info-card">
+                    <h3>✉️ Email</h3>
+                    <p>contact@bankctf.fr<br>support@bankctf.fr</p>
+                </div>
+                <div class="info-card">
+                    <h3>🕒 Horaires</h3>
+                    <p>Lundi - Vendredi: 9h - 18h<br>Samedi: 9h - 13h</p>
+                </div>
+            </div>
+            
+            <div class="contact-form-container">
+                <h2>Envoyez-nous un message</h2>
+                <form class="contact-form" onsubmit="return false;">
+                    <input type="text" placeholder="Votre nom" required>
+                    <input type="email" placeholder="Votre email" required>
+                    <textarea placeholder="Votre message" rows="5" required></textarea>
+                    <button type="submit" class="btn-primary">Envoyer</button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        document.querySelector('.contact-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('Message envoyé ! Nous vous répondrons dans les plus brefs délais.');
+            this.reset();
+        });
+    </script>
+</body>
+</html>
+
+

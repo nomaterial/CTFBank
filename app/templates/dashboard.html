@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de bord - BankCTF</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">🏦 BankCTF</div>
+            <ul>
+                <li><a href="/dashboard">Tableau de bord</a></li>
+                <li><a href="/logout" onclick="event.preventDefault(); if(confirm('Déconnexion?')) {fetch('/logout', {method: 'POST'}); window.location='/';}">Déconnexion</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="dashboard-section">
+            <h1>Bienvenue, {{ username }}!</h1>
+            {% if role == 'admin' %}
+            <div class="admin-badge">👑 Administrateur</div>
+            {% endif %}
+            
+            <div class="dashboard-content">
+                <div class="search-section">
+                    <h2>Recherche d'utilisateurs</h2>
+                    <p class="info-text">Recherchez un utilisateur par nom ou email dans la base de données.</p>
+                    <div class="search-container">
+                        <input type="text" id="search-input" placeholder="Entrez un nom ou email..." class="search-box">
+                        <button onclick="searchUsers()" class="btn-primary">Rechercher</button>
+                    </div>
+                </div>
+
+                <div id="search-results" class="results-container"></div>
+                <div id="exec-results" class="exec-results"></div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        function searchUsers() {
+            const query = document.getElementById('search-input').value;
+            const resultsDiv = document.getElementById('search-results');
+            const execDiv = document.getElementById('exec-results');
+            
+            if (!query) {
+                alert('Veuillez entrer une recherche');
+                return;
+            }
+
+            resultsDiv.innerHTML = '<p>Recherche en cours...</p>';
+            execDiv.innerHTML = '';
+
+            fetch('/api/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ query: query })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    resultsDiv.innerHTML = `<div class="error-message">${data.error}</div>`;
+                    return;
+                }
+
+                if (data.exec_result) {
+                    execDiv.innerHTML = `
+                        <div class="exec-output">
+                            <h3>Résultat de l'exécution:</h3>
+                            <pre>${data.exec_result}</pre>
+                        </div>
+                    `;
+                }
+
+                if (data.users && data.users.length > 0) {
+                    let html = '<h3>Résultats de la recherche:</h3><table class="users-table"><thead><tr><th>ID</th><th>Username</th><th>Email</th><th>Role</th><th>Balance</th></tr></thead><tbody>';
+                    data.users.forEach(user => {
+                        html += `<tr>
+                            <td>${user.id}</td>
+                            <td>${user.username}</td>
+                            <td>${user.email || 'N/A'}</td>
+                            <td>${user.role}</td>
+                            <td>${user.balance ? user.balance.toFixed(2) + '€' : '0.00€'}</td>
+                        </tr>`;
+                    });
+                    html += '</tbody></table>';
+                    resultsDiv.innerHTML = html;
+                } else {
+                    resultsDiv.innerHTML = '<p>Aucun utilisateur trouvé.</p>';
+                }
+            })
+            .catch(error => {
+                resultsDiv.innerHTML = `<div class="error-message">Erreur: ${error.message}</div>`;
+            });
+        }
+
+        // Permettre la recherche avec Enter
+        document.getElementById('search-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchUsers();
+            }
+        });
+    </script>
+</body>
+</html>
+
+

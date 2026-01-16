@@ -1,0 +1,15 @@
+[Unit]
+Description=CTF Bank Web App
+After=network.target
+
+[Service]
+Type=simple
+User=ctfbank
+WorkingDirectory=/opt/ctfbank
+Environment=OLLAMA_HOST=http://{{ ollama_ip }}:11434
+Environment=DAB_HOST=http://{{ dab_ip }}:8080
+ExecStart=/opt/ctfbank/.venv/bin/python /opt/ctfbank/app/app.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,35 @@
+---
+- name: Détruire les conteneurs Proxmox
+  hosts: local
+  gather_facts: false
+  vars_files:
+    - ../vars.yml
+  tasks:
+    - name: Arrêter les conteneurs
+      community.general.proxmox:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ proxmox_user }}"
+        api_token_id: "{{ proxmox_token_id }}"
+        api_token_secret: "{{ proxmox_token_secret }}"
+        node: "{{ proxmox_node }}"
+        vmid: "{{ item }}"
+        state: stopped
+      loop:
+        - "{{ web_ct_id }}"
+        - "{{ dab_ct_id }}"
+        - "{{ ollama_ct_id }}"
+      ignore_errors: true
+
+    - name: Supprimer les conteneurs
+      community.general.proxmox:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ proxmox_user }}"
+        api_token_id: "{{ proxmox_token_id }}"
+        api_token_secret: "{{ proxmox_token_secret }}"
+        node: "{{ proxmox_node }}"
+        vmid: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ web_ct_id }}"
+        - "{{ dab_ct_id }}"
+        - "{{ ollama_ct_id }}"

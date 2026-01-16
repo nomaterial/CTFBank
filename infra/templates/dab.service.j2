@@ -1,0 +1,13 @@
+[Unit]
+Description=DAB Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/dab
+ExecStart=/opt/dab/.venv/bin/python /opt/dab/dab_service.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

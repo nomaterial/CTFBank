@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de bord IT - BankCTF</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">🏦 BankCTF</div>
+            <ul>
+                <li><a href="/dashboard">Tableau de bord</a></li>
+                <li><a href="/logout" onclick="event.preventDefault(); if(confirm('Déconnexion?')) {fetch('/logout', {method: 'POST'}); window.location='/';}">Déconnexion</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="dashboard-section">
+            <h1>Bienvenue, {{ username }}!</h1>
+            <div class="it-badge">🔧 Service Informatique</div>
+            
+            <div class="dashboard-content">
+                <!-- Gestion DAB -->
+                <div class="dab-section">
+                    <h2>🏧 Gestion de la Borne DAB</h2>
+                    <p class="info-text">Interface de gestion de la borne DAB située en face de la banque. Cette borne est gérée en Java.</p>
+                    <p class="info-text-small">💡 Vous pouvez envoyer des instructions Java qui seront interprétées et exécutées sur le DAB.</p>
+                    
+                    <div class="dab-interface">
+                        <h3>Envoyer une instruction Java</h3>
+                        <textarea id="java-code" placeholder='public class Test {
+    public static void main(String[] args) {
+        System.out.println("Hello DAB!");
+    }
+}' rows="15" class="code-textarea"></textarea>
+                        <button onclick="executeJavaCode()" class="btn-primary">Exécuter sur le DAB</button>
+                    </div>
+
+                    <div id="java-result" class="results-container"></div>
+                </div>
+
+                <!-- Exemples -->
+                <div class="examples-section">
+                    <h3>📚 Exemples d'instructions</h3>
+                    <div class="example-cards">
+                        <div class="example-card" onclick="loadExample('status')">
+                            <h4>Vérifier le statut</h4>
+                            <code>System.out.println("DAB OK");</code>
+                        </div>
+                        <div class="example-card" onclick="loadExample('test')">
+                            <h4>Test de connexion</h4>
+                            <code>Runtime.getRuntime().exec("echo test");</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const examples = {
+            status: `public class DABStatus {
+    public static void main(String[] args) {
+        System.out.println("Statut du DAB: Opérationnel");
+    }
+}`,
+            test: `public class TestConnection {
+    public static void main(String[] args) {
+        try {
+            Process p = Runtime.getRuntime().exec("echo 'Test DAB'");
+            p.waitFor();
+            System.out.println("Connexion réussie");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}`
+        };
+
+        function loadExample(type) {
+            document.getElementById('java-code').value = examples[type] || '';
+        }
+
+        function executeJavaCode() {
+            const code = document.getElementById('java-code').value;
+            const resultDiv = document.getElementById('java-result');
+            
+            if (!code.trim()) {
+                alert('Veuillez entrer du code Java');
+                return;
+            }
+
+            resultDiv.innerHTML = '<p>Exécution en cours sur le DAB...</p>';
+
+            fetch('/api/dab/execute', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ code: code })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="success-message">
+                            <h3>✅ Code exécuté avec succès sur le DAB</h3>
+                            <div class="exec-output">
+                                <h4>Sortie standard:</h4>
+                                <pre>${data.stdout || '(vide)'}</pre>
+                                ${data.stderr ? `<h4>Erreurs:</h4><pre>${data.stderr}</pre>` : ''}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error-message">
+                            <h3>❌ Erreur lors de l'exécution</h3>
+                            <p>${data.error || 'Erreur inconnue'}</p>
+                            ${data.output ? `<pre>${data.output}</pre>` : ''}
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                resultDiv.innerHTML = `<div class="error-message">Erreur: ${error.message}</div>`;
+            });
+        }
+    </script>
+</body>
+</html>
+
+

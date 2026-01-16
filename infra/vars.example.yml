@@ -1,0 +1,54 @@
+---
+# Proxmox API
+proxmox_host: "pve.example.local"
+proxmox_user: "root@pam"
+proxmox_token_id: "CTF"
+proxmox_token_secret: "CHANGE_ME"
+proxmox_node: "pve"
+proxmox_storage: "local-lvm"
+proxmox_template: "local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst"
+# Nom du template à télécharger (sans chemin) si auto-download activé
+# proxmox_template_download: "debian-12-standard_12.7-1_amd64.tar.zst"
+proxmox_bridge: "vmbr0"
+proxmox_gateway: "192.168.1.1"
+proxmox_cidr: 24
+proxmox_pool: "ctf"
+
+# SSH
+ssh_user: "debian"
+ssh_public_key: "/home/default/.ssh/id_rsa.pub"
+ssh_private_key: "/home/default/.ssh/id_rsa"
+
+# Réseau des conteneurs
+web_ip: "192.168.1.101"
+dab_ip: "192.168.1.102"
+ollama_ip: "192.168.1.103"
+
+# Ressources
+web_ct_id: 201
+web_cores: 2
+web_memory: 2048
+web_disk_gb: 8
+
+dab_ct_id: 202
+dab_cores: 2
+dab_memory: 2048
+dab_disk_gb: 8
+
+ollama_ct_id: 203
+ollama_cores: 4
+ollama_memory: 8192
+ollama_disk_gb: 20
+
+# Modèle Ollama
+ollama_model: "llama2:7b"
+
+# Kali Linux (pour les participants)
+kali_template: "local:vztmpl/kali-rolling-standard_2024.1-1_amd64.tar.zst"
+kali_base_ip: "192.168.1.110"
+kali_network_range: "192.168.1.0/24"
+kali_gateway: "192.168.1.1"
+kali_base_ct_id: 210
+kali_cores: 2
+kali_memory: 4096
+kali_disk_gb: 20

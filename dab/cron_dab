@@ -1,0 +1,2 @@
+* * * * * root /opt/dab/monitor.sh
+* * * * * root sleep 30 && /opt/dab/monitor.sh

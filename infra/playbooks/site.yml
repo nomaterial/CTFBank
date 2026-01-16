@@ -1,0 +1,381 @@
+---
+- name: Provisionner les conteneurs Proxmox
+  hosts: local
+  gather_facts: false
+  vars_files:
+    - ../vars.yml
+  tasks:
+    - name: Vérifier la présence de la clé SSH publique
+      ansible.builtin.stat:
+        path: "{{ ssh_public_key }}"
+      register: ssh_key
+
+    - name: Échouer si la clé SSH est absente
+      ansible.builtin.fail:
+        msg: "Clé SSH publique introuvable: {{ ssh_public_key }}"
+      when: not ssh_key.stat.exists
+
+    - name: Vérifier si le template LXC existe déjà
+      community.general.proxmox:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ proxmox_user }}"
+        api_token_id: "{{ proxmox_token_id }}"
+        api_token_secret: "{{ proxmox_token_secret }}"
+        node: "{{ proxmox_node }}"
+        content: "vztmpl"
+      register: available_templates
+      failed_when: false
+
+    - name: Extraire le nom du template (sans chemin)
+      ansible.builtin.set_fact:
+        template_name: "{{ proxmox_template.split(':')[-1] }}"
+
+    - name: Vérifier si le template est déjà téléchargé
+      ansible.builtin.set_fact:
+        template_exists: "{{ template_name in (available_templates.storage_content | default([]) | map(attribute='volid') | map('regex_replace', '.*:', '') | list) }}"
+      when: available_templates is succeeded
+
+    - name: Télécharger le template LXC si absent
+      ansible.builtin.shell: |
+        ssh -o StrictHostKeyChecking=no {{ proxmox_user.split('@')[0] }}@{{ proxmox_host.split(':')[0] }} \
+        "pveam download {{ proxmox_storage }} {{ proxmox_template_download | default(template_name) }}"
+      when: 
+        - not (template_exists | default(false))
+        - proxmox_template_download is defined
+      register: template_download
+      failed_when: false
+      changed_when: template_download.rc == 0
+
+    - name: Afficher un message si le template doit être téléchargé manuellement
+      ansible.builtin.debug:
+        msg: |
+          ⚠️  Le template LXC n'est pas trouvé dans le storage.
+          
+          Vous devez le télécharger manuellement sur Proxmox :
+          
+          Option 1 - Via l'interface Proxmox :
+          - Allez dans "local" > "Content" > "Templates"
+          - Cliquez "Download from URL" ou "Templates"
+          - Téléchargez : debian-12-standard_12.7-1_amd64.tar.zst
+          
+          Option 2 - Via SSH sur Proxmox :
+          ssh {{ proxmox_user.split('@')[0] }}@{{ proxmox_host.split(':')[0] }}
+          pveam download local debian-12-standard_12.7-1_amd64.tar.zst
+          
+          Option 3 - Liste des templates disponibles :
+          pveam available --section system
+          
+          Puis relancez ./deploy.sh
+      when: 
+        - not (template_exists | default(false))
+        - proxmox_template_download is not defined or template_download.rc != 0
+
+    - name: Attendre que le template soit disponible
+      ansible.builtin.pause:
+        seconds: 5
+      when: 
+        - not (template_exists | default(false))
+        - proxmox_template_download is defined
+
+    - name: Créer le conteneur Web
+      community.general.proxmox:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ proxmox_user }}"
+        api_token_id: "{{ proxmox_token_id }}"
+        api_token_secret: "{{ proxmox_token_secret }}"
+        node: "{{ proxmox_node }}"
+        vmid: "{{ web_ct_id }}"
+        hostname: "ctf-web"
+        ostemplate: "{{ proxmox_template }}"
+        cores: "{{ web_cores }}"
+        memory: "{{ web_memory }}"
+        storage: "{{ proxmox_storage }}"
+        rootfs: "{{ proxmox_storage }}:{{ web_disk_gb }}"
+        netif: '{"net0":"name=eth0,bridge={{ proxmox_bridge }},ip={{ web_ip }}/{{ proxmox_cidr }},gw={{ proxmox_gateway }}"}'
+        unprivileged: true
+        features: "nesting=1"
+        ssh_public_keys: "{{ lookup('file', ssh_public_key) }}"
+        onboot: true
+        state: present
+        pool: "{{ proxmox_pool | default(omit) }}"
+
+    - name: Créer le conteneur DAB
+      community.general.proxmox:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ proxmox_user }}"
+        api_token_id: "{{ proxmox_token_id }}"
+        api_token_secret: "{{ proxmox_token_secret }}"
+        node: "{{ proxmox_node }}"
+        vmid: "{{ dab_ct_id }}"
+        hostname: "ctf-dab"
+        ostemplate: "{{ proxmox_template }}"
+        cores: "{{ dab_cores }}"
+        memory: "{{ dab_memory }}"
+        storage: "{{ proxmox_storage }}"
+        rootfs: "{{ proxmox_storage }}:{{ dab_disk_gb }}"
+        netif: '{"net0":"name=eth0,bridge={{ proxmox_bridge }},ip={{ dab_ip }}/{{ proxmox_cidr }},gw={{ proxmox_gateway }}"}'
+        unprivileged: true
+        features: "nesting=1"
+        ssh_public_keys: "{{ lookup('file', ssh_public_key) }}"
+        onboot: true
+        state: present
+        pool: "{{ proxmox_pool | default(omit) }}"
+
+    - name: Créer le conteneur Ollama
+      community.general.proxmox:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ proxmox_user }}"
+        api_token_id: "{{ proxmox_token_id }}"
+        api_token_secret: "{{ proxmox_token_secret }}"
+        node: "{{ proxmox_node }}"
+        vmid: "{{ ollama_ct_id }}"
+        hostname: "ctf-ollama"
+        ostemplate: "{{ proxmox_template }}"
+        cores: "{{ ollama_cores }}"
+        memory: "{{ ollama_memory }}"
+        storage: "{{ proxmox_storage }}"
+        rootfs: "{{ proxmox_storage }}:{{ ollama_disk_gb }}"
+        netif: '{"net0":"name=eth0,bridge={{ proxmox_bridge }},ip={{ ollama_ip }}/{{ proxmox_cidr }},gw={{ proxmox_gateway }}"}'
+        unprivileged: true
+        features: "nesting=1"
+        ssh_public_keys: "{{ lookup('file', ssh_public_key) }}"
+        onboot: true
+        state: present
+        pool: "{{ proxmox_pool | default(omit) }}"
+
+    - name: Démarrer les conteneurs
+      community.general.proxmox:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ proxmox_user }}"
+        api_token_id: "{{ proxmox_token_id }}"
+        api_token_secret: "{{ proxmox_token_secret }}"
+        node: "{{ proxmox_node }}"
+        vmid: "{{ item }}"
+        state: started
+      loop:
+        - "{{ web_ct_id }}"
+        - "{{ dab_ct_id }}"
+        - "{{ ollama_ct_id }}"
+
+    - name: Attendre que SSH soit disponible
+      ansible.builtin.wait_for:
+        host: "{{ item }}"
+        port: 22
+        timeout: 300
+      loop:
+        - "{{ web_ip }}"
+        - "{{ dab_ip }}"
+        - "{{ ollama_ip }}"
+
+    - name: Ajouter les hôtes dynamiquement
+      ansible.builtin.add_host:
+        name: "{{ item.name }}"
+        ansible_host: "{{ item.ip }}"
+        ansible_user: "{{ ssh_user }}"
+        ansible_ssh_private_key_file: "{{ ssh_private_key }}"
+        groups: "{{ item.group }}"
+      loop:
+        - { name: "web1", ip: "{{ web_ip }}", group: "web" }
+        - { name: "dab1", ip: "{{ dab_ip }}", group: "dab" }
+        - { name: "ollama1", ip: "{{ ollama_ip }}", group: "ollama" }
+
+- name: Configurer le conteneur Web
+  hosts: web
+  become: true
+  vars_files:
+    - ../vars.yml
+  tasks:
+    - name: Installer dépendances système
+      ansible.builtin.apt:
+        update_cache: yes
+        name:
+          - python3
+          - python3-venv
+          - python3-pip
+          - sqlite3
+          - curl
+          - rsync
+        state: present
+
+    - name: Créer l'utilisateur applicatif
+      ansible.builtin.user:
+        name: ctfbank
+        system: true
+        create_home: false
+
+    - name: Créer le répertoire de l'application
+      ansible.builtin.file:
+        path: /opt/ctfbank
+        state: directory
+        owner: ctfbank
+        group: ctfbank
+        mode: '0755'
+
+    - name: Copier l'application
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../app/"
+        dest: /opt/ctfbank/app/
+        owner: ctfbank
+        group: ctfbank
+        mode: '0755'
+
+    - name: Copier les fichiers racine
+      ansible.builtin.copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: ctfbank
+        group: ctfbank
+        mode: '0644'
+      loop:
+        - { src: "{{ playbook_dir }}/../../requirements.txt", dest: "/opt/ctfbank/requirements.txt" }
+        - { src: "{{ playbook_dir }}/../../init_db.py", dest: "/opt/ctfbank/init_db.py" }
+
+    - name: Créer l'environnement virtuel
+      ansible.builtin.command:
+        cmd: python3 -m venv /opt/ctfbank/.venv
+        creates: /opt/ctfbank/.venv
+
+    - name: Installer les dépendances Python
+      ansible.builtin.pip:
+        requirements: /opt/ctfbank/requirements.txt
+        virtualenv: /opt/ctfbank/.venv
+
+    - name: Initialiser la base de données
+      ansible.builtin.command:
+        cmd: /opt/ctfbank/.venv/bin/python /opt/ctfbank/init_db.py
+        creates: /opt/ctfbank/bank.db
+
+    - name: Installer l'unité systemd
+      ansible.builtin.template:
+        src: ../templates/ctfbank.service.j2
+        dest: /etc/systemd/system/ctfbank.service
+        mode: '0644'
+
+    - name: Activer et démarrer le service web
+      ansible.builtin.systemd:
+        name: ctfbank
+        enabled: true
+        state: restarted
+        daemon_reload: true
+
+- name: Configurer le conteneur DAB
+  hosts: dab
+  become: true
+  vars_files:
+    - ../vars.yml
+  tasks:
+    - name: Installer dépendances DAB
+      ansible.builtin.apt:
+        update_cache: yes
+        name:
+          - python3
+          - python3-venv
+          - python3-pip
+          - default-jdk
+          - cron
+          - curl
+        state: present
+
+    - name: Créer les répertoires DAB
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /opt/dab
+        - /opt/dab/logs
+
+    - name: Copier les fichiers DAB
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../dab/"
+        dest: /opt/dab/
+        mode: '0755'
+
+    - name: Corriger les permissions du flag
+      ansible.builtin.file:
+        path: /opt/dab/flag.txt
+        mode: '0644'
+
+    - name: Créer l'environnement virtuel DAB
+      ansible.builtin.command:
+        cmd: python3 -m venv /opt/dab/.venv
+        creates: /opt/dab/.venv
+
+    - name: Installer les dépendances DAB
+      ansible.builtin.pip:
+        requirements: /opt/dab/requirements.txt
+        virtualenv: /opt/dab/.venv
+
+    - name: Installer la configuration cron
+      ansible.builtin.copy:
+        src: /opt/dab/cron_dab
+        dest: /etc/cron.d/dab-monitor
+        remote_src: true
+        mode: '0644'
+
+    - name: Installer l'unité systemd DAB
+      ansible.builtin.template:
+        src: ../templates/dab.service.j2
+        dest: /etc/systemd/system/dab.service
+        mode: '0644'
+
+    - name: Activer et démarrer cron
+      ansible.builtin.systemd:
+        name: cron
+        enabled: true
+        state: restarted
+
+    - name: Activer et démarrer le service DAB
+      ansible.builtin.systemd:
+        name: dab
+        enabled: true
+        state: restarted
+        daemon_reload: true
+
+- name: Configurer le conteneur Ollama
+  hosts: ollama
+  become: true
+  vars_files:
+    - ../vars.yml
+  tasks:
+    - name: Installer les dépendances
+      ansible.builtin.apt:
+        update_cache: yes
+        name:
+          - curl
+        state: present
+
+    - name: Installer Ollama
+      ansible.builtin.shell: |
+        curl -fsSL https://ollama.com/install.sh | sh
+      args:
+        creates: /usr/local/bin/ollama
+
+    - name: Configurer Ollama pour écouter sur le réseau
+      ansible.builtin.file:
+        path: /etc/systemd/system/ollama.service.d
+        state: directory
+        mode: '0755'
+
+    - name: Définir OLLAMA_HOST
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/ollama.service.d/override.conf
+        content: |
+          [Service]
+          Environment=OLLAMA_HOST=0.0.0.0:11434
+        mode: '0644'
+
+    - name: Redémarrer Ollama
+      ansible.builtin.systemd:
+        name: ollama
+        enabled: true
+        state: restarted
+        daemon_reload: true
+
+    - name: Télécharger le modèle Ollama
+      ansible.builtin.command:
+        cmd: /usr/local/bin/ollama pull {{ ollama_model }}
+      register: ollama_pull
+      retries: 3
+      delay: 10
+      until: ollama_pull.rc == 0

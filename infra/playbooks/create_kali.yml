@@ -1,0 +1,103 @@
+---
+- name: Créer des conteneurs Kali Linux pour participants
+  hosts: local
+  gather_facts: false
+  vars_files:
+    - ../vars.yml
+  vars:
+    kali_count: "{{ kali_count | default(1) }}"
+    kali_start_id: "{{ kali_start_id | default(kali_base_ct_id) }}"
+  tasks:
+    - name: Vérifier la présence de la clé SSH publique
+      ansible.builtin.stat:
+        path: "{{ ssh_public_key }}"
+      register: ssh_key
+
+    - name: Échouer si la clé SSH est absente
+      ansible.builtin.fail:
+        msg: "Clé SSH publique introuvable: {{ ssh_public_key }}"
+      when: not ssh_key.stat.exists
+
+    - name: Vérifier si le template Kali existe
+      community.general.proxmox:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ proxmox_user }}"
+        api_token_id: "{{ proxmox_token_id }}"
+        api_token_secret: "{{ proxmox_token_secret }}"
+        node: "{{ proxmox_node }}"
+        content: "vztmpl"
+      register: available_templates
+      failed_when: false
+
+    - name: Extraire le nom du template Kali
+      ansible.builtin.set_fact:
+        kali_template_name: "{{ kali_template.split(':')[-1] }}"
+
+    - name: Vérifier si le template Kali est téléchargé
+      ansible.builtin.set_fact:
+        kali_template_exists: "{{ kali_template_name in (available_templates.storage_content | default([]) | map(attribute='volid') | map('regex_replace', '.*:', '') | list) }}"
+      when: available_templates is succeeded
+
+    - name: Afficher un message si le template Kali doit être téléchargé
+      ansible.builtin.debug:
+        msg: |
+          ⚠️  Le template Kali n'est pas trouvé dans le storage.
+          
+          Téléchargez-le sur Proxmox :
+          
+          ssh {{ proxmox_user.split('@')[0] }}@{{ proxmox_host.split(':')[0] }}
+          pveam update
+          pveam available --section system | grep kali
+          pveam download local kali-rolling-standard_2024.1-1_amd64.tar.zst
+          
+          Puis relancez le script.
+      when: not (kali_template_exists | default(false))
+
+    - name: Créer les conteneurs Kali
+      community.general.proxmox:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ proxmox_user }}"
+        api_token_id: "{{ proxmox_token_id }}"
+        api_token_secret: "{{ proxmox_token_secret }}"
+        node: "{{ proxmox_node }}"
+        vmid: "{{ kali_start_id | int + item }}"
+        hostname: "kali-{{ '%02d' | format(item) }}"
+        ostemplate: "{{ kali_template }}"
+        cores: "{{ kali_cores }}"
+        memory: "{{ kali_memory }}"
+        storage: "{{ proxmox_storage }}"
+        rootfs: "{{ proxmox_storage }}:{{ kali_disk_gb }}"
+        netif: '{"net0":"name=eth0,bridge={{ proxmox_bridge }},ip={{ kali_base_ip.split(".")[0] }}.{{ kali_base_ip.split(".")[1] }}.{{ kali_base_ip.split(".")[2] }}.{{ (kali_base_ip.split(".")[3] | int) + item }}/{{ proxmox_cidr }},gw={{ kali_gateway }}"}'
+        unprivileged: true
+        features: "nesting=1"
+        ssh_public_keys: "{{ lookup('file', ssh_public_key) }}"
+        onboot: true
+        state: present
+        pool: "{{ proxmox_pool | default(omit) }}"
+      loop: "{{ range(0, kali_count | int) | list }}"
+      when: kali_template_exists | default(false)
+      register: kali_containers
+
+    - name: Démarrer les conteneurs Kali
+      community.general.proxmox:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ proxmox_user }}"
+        api_token_id: "{{ proxmox_token_id }}"
+        api_token_secret: "{{ proxmox_token_secret }}"
+        node: "{{ proxmox_node }}"
+        vmid: "{{ kali_start_id | int + item }}"
+        state: started
+      loop: "{{ range(0, kali_count | int) | list }}"
+      when: kali_template_exists | default(false)
+
+    - name: Afficher les informations des conteneurs Kali créés
+      ansible.builtin.debug:
+        msg: |
+          ✅ Conteneurs Kali créés :
+          {% for i in range(0, kali_count | int) %}
+          - kali-{{ '%02d' | format(i) }} (ID: {{ kali_start_id | int + i }}, IP: {{ kali_base_ip.split(".")[0] }}.{{ kali_base_ip.split(".")[1] }}.{{ kali_base_ip.split(".")[2] }}.{{ (kali_base_ip.split(".")[3] | int) + i }})
+          {% endfor %}
+          
+          Connexion SSH :
+          ssh {{ ssh_user }}@{{ kali_base_ip.split(".")[0] }}.{{ kali_base_ip.split(".")[1] }}.{{ kali_base_ip.split(".")[2] }}.{{ kali_base_ip.split(".")[3] | int }}
+      when: kali_template_exists | default(false)

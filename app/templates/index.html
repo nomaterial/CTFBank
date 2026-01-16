@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BankCTF - Votre Banque de Confiance</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">🏦 BankCTF</div>
+            <ul>
+                <li><a href="/">Accueil</a></li>
+                <li><a href="/contact">Contact</a></li>
+                <li><a href="/login">Se connecter</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero">
+            <h1>Bienvenue chez BankCTF</h1>
+            <p>Votre partenaire financier de confiance depuis 1985</p>
+            <p>Sécurité, innovation et service client au cœur de nos valeurs</p>
+        </section>
+
+        <section class="features">
+            <div class="feature-card">
+                <h3>🔒 Sécurité Avancée</h3>
+                <p>Vos données sont protégées par les dernières technologies de cryptographie et de sécurité informatique</p>
+            </div>
+            <div class="feature-card">
+                <h3>💳 Services Complets</h3>
+                <p>Comptes courants, épargne, investissements, crédits immobiliers et bien plus encore</p>
+            </div>
+            <div class="feature-card">
+                <h3>🤝 Support 24/7</h3>
+                <p>Notre assistant IA intelligent est disponible 24h/24 et 7j/7 pour répondre à toutes vos questions</p>
+            </div>
+            <div class="feature-card">
+                <h3>📱 Application Mobile</h3>
+                <p>Gérez vos comptes en toute simplicité depuis votre smartphone, où que vous soyez</p>
+            </div>
+            <div class="feature-card">
+                <h3>🌍 Présence Internationale</h3>
+                <p>Plus de 50 pays, des services bancaires partout dans le monde</p>
+            </div>
+            <div class="feature-card">
+                <h3>💼 Services Entreprise</h3>
+                <p>Solutions bancaires adaptées aux besoins de votre entreprise, petites ou grandes</p>
+            </div>
+        </section>
+
+        <section class="cta">
+            <h2>Prêt à commencer ?</h2>
+            <p>Rejoignez des millions de clients satisfaits dès aujourd'hui</p>
+            <a href="/login" class="btn-primary">Se connecter</a>
+            <a href="/contact" class="btn-secondary">Nous contacter</a>
+        </section>
+    </main>
+
+    <!-- Bulle de chat flottante -->
+    <div id="chat-bubble" class="chat-bubble" onclick="toggleChat()">
+        💬
+    </div>
+
+    <div id="chat-window" class="chat-window hidden">
+        <div class="chat-header">
+            <h3>Assistant Bancaire IA</h3>
+            <button onclick="toggleChat()">✕</button>
+        </div>
+        <div id="chat-messages" class="chat-messages">
+            <div class="message assistant">
+                Bonjour ! Je suis votre assistant bancaire. Comment puis-je vous aider aujourd'hui ?
+            </div>
+        </div>
+        <div class="chat-input-container">
+            <input type="text" id="chat-input" placeholder="Posez votre question..." onkeypress="handleKeyPress(event)">
+            <button onclick="sendMessage()">Envoyer</button>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='chat.js') }}"></script>
+</body>
+</html>
+
+

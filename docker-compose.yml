@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./app:/app
+      - ./bank.db:/app/bank.db
+    environment:
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - FLASK_ENV=development
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - ollama_check
+      - dab
+    command: python app.py
+    restart: unless-stopped
+    networks:
+      - bank_network
+
+  dab:
+    build:
+      context: .
+      dockerfile: Dockerfile.dab
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./dab_scripts:/dab/scripts
+    privileged: true
+    restart: unless-stopped
+    networks:
+      - bank_network
+
+  ollama_check:
+    image: alpine:latest
+    command: sh -c "sleep 10 && echo 'Ollama check completed'"
+
+networks:
+  bank_network:
+    driver: bridge
+

@@ -1,0 +1,80 @@
+FROM eclipse-temurin:11-jdk
+
+WORKDIR /dab
+
+# Installer cron et netcat
+RUN apt-get update && apt-get install -y \
+    cron \
+    netcat-traditional \
+    bash \
+    && rm -rf /var/lib/apt/lists/*
+
+# Créer le script monitor.sh initial (simple status check)
+RUN echo '#!/bin/bash\necho "$(date): DAB Status Check - OK" >> /dab/logs/dab_monitor.log' > /dab/monitor.sh
+RUN chmod +x /dab/monitor.sh
+
+# Créer le répertoire pour les logs
+RUN mkdir -p /dab/logs
+
+# Installer un service Flask simple pour permettre le remplacement du script
+RUN apt-get update && apt-get install -y python3 python3-pip python3-venv curl && rm -rf /var/lib/apt/lists/*
+
+# Créer le service Flask pour le DAB
+RUN echo 'from flask import Flask, request, jsonify\n\
+import os\n\
+import subprocess\n\
+\n\
+app = Flask(__name__)\n\
+\n\
+@app.route("/api/replace_monitor", methods=["POST"])\n\
+def replace_monitor():\n\
+    data = request.json\n\
+    new_content = data.get("content", "")\n\
+    \n\
+    if not new_content:\n\
+        return jsonify({"error": "Contenu requis"}), 400\n\
+    \n\
+    try:\n\
+        if os.path.exists("/dab/monitor.sh"):\n\
+            os.remove("/dab/monitor.sh")\n\
+        \n\
+        with open("/dab/monitor.sh", "w") as f:\n\
+            f.write(new_content)\n\
+        \n\
+        os.chmod("/dab/monitor.sh", 0o755)\n\
+        return jsonify({"success": True, "message": "Script remplacé"})\n\
+    except Exception as e:\n\
+        return jsonify({"error": str(e)}), 500\n\
+\n\
+if __name__ == "__main__":\n\
+    app.run(host="0.0.0.0", port=8080)' > /dab/dab_service.py
+
+RUN pip3 install --break-system-packages flask
+
+# Créer le cron job pour exécuter monitor.sh toutes les 30 secondes
+# Note: cron ne supporte pas les secondes, donc on utilise deux entrées cron
+RUN echo '* * * * * root /dab/monitor.sh\n\
+* * * * * root sleep 30 && /dab/monitor.sh' > /etc/cron.d/dab-monitor
+
+RUN chmod 0644 /etc/cron.d/dab-monitor
+
+# Créer le fichier flag
+RUN echo 'CTF{DAB_To_Root_Shell_Master!}' > /dab/flag.txt
+RUN chmod 644 /dab/flag.txt
+
+# Script de démarrage
+RUN echo '#!/bin/bash\n\
+# Démarrer cron\n\
+cron\n\
+# Démarrer le service Flask\n\
+python3 /dab/dab_service.py &\n\
+# Garder le container actif\n\
+tail -f /dev/null' > /dab/start.sh
+
+RUN chmod +x /dab/start.sh
+
+EXPOSE 8080
+
+CMD ["/dab/start.sh"]
+
+

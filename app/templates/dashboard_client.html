@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de bord - BankCTF</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">🏦 BankCTF</div>
+            <ul>
+                <li><a href="/dashboard">Tableau de bord</a></li>
+                <li><a href="/logout" onclick="event.preventDefault(); if(confirm('Déconnexion?')) {fetch('/logout', {method: 'POST'}); window.location='/';}">Déconnexion</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="dashboard-section">
+            <h1>Bienvenue, {{ username }}!</h1>
+            
+            <div class="dashboard-content">
+                <div class="client-welcome">
+                    <h2>Votre espace client</h2>
+                    <p>Gérez vos comptes et vos opérations bancaires en toute simplicité.</p>
+                    
+                    <div class="account-info">
+                        <h3>Compte courant</h3>
+                        <p class="balance">Solde disponible : <strong>Voir dans votre profil</strong></p>
+                    </div>
+                    
+                    <div class="quick-actions">
+                        <h3>Actions rapides</h3>
+                        <div class="action-buttons">
+                            <button class="btn-primary" onclick="alert('Fonctionnalité en développement')">Virement</button>
+                            <button class="btn-secondary" onclick="alert('Fonctionnalité en développement')">Historique</button>
+                            <button class="btn-secondary" onclick="alert('Fonctionnalité en développement')">Paramètres</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+</body>
+</html>
+
+
