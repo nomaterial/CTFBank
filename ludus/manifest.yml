@@ -1,0 +1,62 @@
+---
+name: CTF Bank Challenge
+description: Challenge CTF multi-étapes avec LLM, SQL Injection, RCE Java et Privilege Escalation
+
+# Ludus va créer automatiquement les VMs/Containers
+# Pas besoin de configurer IPs manuellement
+
+modules:
+  - name: ctf-web
+    type: lxc
+    template: debian-12-standard
+    resources:
+      cores: 2
+      memory: 2048
+      disk: 8G
+    config:
+      user: debian
+      ssh_key: "{{ ludus_ssh_key }}"
+      scripts:
+        - name: setup-web
+          type: ansible
+          playbook: ../infra/playbooks/web_setup.yml
+          vars:
+            ollama_host: "{{ modules.ctf-ollama.ip }}"
+            dab_host: "{{ modules.ctf-dab.ip }}"
+
+  - name: ctf-dab
+    type: lxc
+    template: debian-12-standard
+    resources:
+      cores: 2
+      memory: 2048
+      disk: 8G
+    privileged: true
+    config:
+      user: debian
+      ssh_key: "{{ ludus_ssh_key }}"
+      scripts:
+        - name: setup-dab
+          type: ansible
+          playbook: ../infra/playbooks/dab_setup.yml
+
+  - name: ctf-ollama
+    type: lxc
+    template: debian-12-standard
+    resources:
+      cores: 4
+      memory: 8192
+      disk: 20G
+    config:
+      user: debian
+      ssh_key: "{{ ludus_ssh_key }}"
+      scripts:
+        - name: setup-ollama
+          type: ansible
+          playbook: ../infra/playbooks/ollama_setup.yml
+          vars:
+            ollama_model: llama2:7b
+
+variables:
+  ludus_ssh_key: "{{ ludus_api_key }}"
+

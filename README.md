@@ -8,7 +8,25 @@ Un challenge CTF réaliste et progressif présentant une application bancaire av
 5. **Privilege Escalation** - Exploitation d'un cron root
 6. **Flag** - Extraction finale
 
-## 🚀 Déploiement Proxmox (Automatisé)
+## 🚀 Déploiement Simplifié (Recommandé)
+
+**Mode ultra-simple** : Juste une clé API et c'est parti !
+
+```bash
+./deploy_simple.sh
+```
+
+Le script :
+- ✅ Détecte automatiquement si vous utilisez **Ludus** ou **Proxmox direct**
+- ✅ Génère automatiquement les IPs et la configuration
+- ✅ Crée les clés SSH si nécessaire
+- ✅ Configure tout automatiquement
+
+**Options** :
+- Mode Ludus : Appuyez sur Entrée, puis entrez votre Ludus API Key
+- Mode Proxmox : Entrez votre Proxmox API Key, hostname et gateway
+
+## 🚀 Déploiement Proxmox (Avancé)
 
 Le déploiement crée **3 conteneurs LXC** sur Proxmox :
 - `ctf-web` : application web (Flask)
