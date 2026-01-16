@@ -10,28 +10,31 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-# Vérifier si on est root
+# Vérifier si on est root (avertissement mais continuer)
 if [ "$EUID" -eq 0 ]; then 
-   echo -e "${RED}Ne pas exécuter en tant que root. Utilisez un utilisateur normal.${NC}"
-   exit 1
+   echo -e "${YELLOW}⚠️  Exécution en tant que root détectée.${NC}"
+   echo -e "${YELLOW}   Les commandes seront exécutées directement sans sudo.${NC}"
+   ROOT_MODE=true
+   SUDO_CMD=""
+else
+   ROOT_MODE=false
+   # Vérifier sudo et demander le mot de passe une fois
+   if ! command -v sudo &> /dev/null; then
+       echo -e "${RED}sudo n'est pas installé. Veuillez installer sudo puis relancer.${NC}"
+       exit 1
+   fi
+   echo -e "${YELLOW}Vérification des droits sudo...${NC}"
+   sudo -v || {
+       echo -e "${RED}Impossible d'obtenir les droits sudo. Abandon.${NC}"
+       exit 1
+   }
+   SUDO_CMD="sudo"
 fi
-
-# Vérifier sudo et demander le mot de passe une fois
-if ! command -v sudo &> /dev/null; then
-    echo -e "${RED}sudo n'est pas installé. Veuillez installer sudo puis relancer.${NC}"
-    exit 1
-fi
-
-echo -e "${YELLOW}Vérification des droits sudo...${NC}"
-sudo -v || {
-    echo -e "${RED}Impossible d'obtenir les droits sudo. Abandon.${NC}"
-    exit 1
-}
 
 # Réparer dpkg si interrompu
 if dpkg --audit 2>/dev/null | grep -q "."; then
     echo -e "${YELLOW}dpkg est interrompu. Réparation en cours...${NC}"
-    sudo dpkg --configure -a || {
+    ${SUDO_CMD} dpkg --configure -a || {
         echo -e "${RED}Échec de la réparation dpkg. Corrigez manuellement puis relancez.${NC}"
         exit 1
     }
@@ -39,8 +42,8 @@ fi
 
 # Installer dépendances
 echo -e "${YELLOW}Installation des dépendances système...${NC}"
-sudo apt-get update
-sudo apt-get install -y \
+${SUDO_CMD} apt-get update
+${SUDO_CMD} apt-get install -y \
     python3 \
     python3-pip \
     python3-venv \
@@ -53,8 +56,8 @@ sudo apt-get install -y \
 # Installer proxmoxer (module Proxmox)
 if ! python3 -c "import proxmoxer" 2>/dev/null; then
     echo -e "${YELLOW}Installation de proxmoxer...${NC}"
-    sudo apt-get install -y python3-proxmoxer || {
-        sudo python3 -m pip install --break-system-packages proxmoxer requests
+    ${SUDO_CMD} apt-get install -y python3-proxmoxer || {
+        ${SUDO_CMD} python3 -m pip install --break-system-packages proxmoxer requests
     }
 fi
 
