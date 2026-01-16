@@ -8,7 +8,29 @@ Un challenge CTF réaliste et progressif présentant une application bancaire av
 5. **Privilege Escalation** - Exploitation d'un cron root
 6. **Flag** - Extraction finale
 
-## 🚀 Déploiement Simplifié (Recommandé)
+## 🚀 Déploiement Manuel (Simple)
+
+**Le plus simple** : Créer 3 VMs manuellement et git clone sur chaque.
+
+Voir le guide complet : **[DEPLOY_MANUAL.md](DEPLOY_MANUAL.md)**
+
+### Résumé rapide
+
+1. **Créer 3 VMs** sur Proxmox (Debian 12) :
+   - `ctf-web` → Application Flask
+   - `ctf-dab` → Service DAB + cron root  
+   - `ctf-ollama` → Modèle LLM
+
+2. **Sur chaque VM** :
+   ```bash
+   git clone https://github.com/nomaterial/CTFBank.git
+   cd CTFBank
+   # Suivre les instructions dans DEPLOY_MANUAL.md
+   ```
+
+3. **Configurer les IPs** dans les variables d'environnement de la VM web
+
+## 🚀 Déploiement Automatisé (Ansible/Ludus)
 
 **Mode ultra-simple** : Juste une clé API et c'est parti !
 
