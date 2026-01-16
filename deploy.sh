@@ -68,10 +68,13 @@ ansible-galaxy collection install -r infra/requirements.yml || true
 # Vérifier le fichier de variables
 if [ ! -f "infra/vars.yml" ]; then
     echo -e "${YELLOW}Fichier infra/vars.yml introuvable.${NC}"
-    echo -e "${YELLOW}Création d'un fichier d'exemple...${NC}"
+    echo -e "${YELLOW}Création automatique à partir de l'exemple...${NC}"
     cp infra/vars.example.yml infra/vars.yml
-    echo -e "${RED}Veuillez éditer infra/vars.yml avec vos paramètres Proxmox, puis relancer.${NC}"
-    exit 1
+    echo -e "${GREEN}✅ Fichier infra/vars.yml créé.${NC}"
+    echo -e "${YELLOW}⚠️  Veuillez éditer infra/vars.yml avec vos paramètres Proxmox avant de continuer.${NC}"
+    echo ""
+    read -p "Appuyez sur Entrée une fois infra/vars.yml configuré pour continuer, ou Ctrl+C pour annuler..." dummy
+    echo ""
 fi
 
 # Lancer le déploiement
